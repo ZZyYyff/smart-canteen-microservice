@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: smart-canteen
+  labels:
+    app: user-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9001
+      targetPort: 9001
+  selector:
+    app: user-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: smart-canteen
+  labels:
+    app: user-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      containers:
+        - name: user-service
+          image: smart-canteen/user-service:latest
+          env:
+            - name: MYSQL_HOST
+              value: mysql
+            - name: MYSQL_PORT
+              value: "3306"
+            - name: MYSQL_USER
+              value: root
+            - name: MYSQL_PASSWORD
+              value: root
+            - name: REDIS_HOST
+              value: redis
+            - name: NACOS_SERVER_ADDR
+              value: nacos:8848
+          ports:
+            - containerPort: 9001
+          readinessProbe:
+            tcpSocket:
+              port: 9001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 9001
+            initialDelaySeconds: 60
+            periodSeconds: 20

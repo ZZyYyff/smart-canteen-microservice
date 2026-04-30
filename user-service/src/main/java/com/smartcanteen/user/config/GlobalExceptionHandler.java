@@ -1,0 +1,47 @@
+package com.smartcanteen.user.config;
+
+import com.smartcanteen.common.enums.ErrorCode;
+import com.smartcanteen.common.exception.BusinessException;
+import com.smartcanteen.common.result.Result;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.stream.Collectors;
+
+/**
+ * 全局异常处理器，将各类异常统一转换为 Result 格式返回
+ */
+@Slf4j
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    /** 业务异常 */
+    @ExceptionHandler(BusinessException.class)
+    public Result<Void> handleBusinessException(BusinessException e) {
+        log.warn("业务异常: code={}, message={}", e.getCode(), e.getMessage());
+        return Result.fail(e.getCode(), e.getMessage());
+    }
+
+    /** 参数校验异常 */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result<Void> handleValidation(MethodArgumentNotValidException e) {
+        String msg = e.getBindingResult().getFieldErrors().stream()
+                .map(err -> err.getField() + ": " + err.getDefaultMessage())
+                .collect(Collectors.joining("; "));
+        log.warn("参数校验失败: {}", msg);
+        return Result.fail(ErrorCode.PARAM_ERROR.getCode(), msg);
+    }
+
+    /** 兜底处理未知异常 */
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public Result<Void> handleException(Exception e) {
+        log.error("系统异常", e);
+        return Result.fail(ErrorCode.SYSTEM_ERROR.getCode(), "服务器内部错误");
+    }
+}
