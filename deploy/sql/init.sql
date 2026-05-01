@@ -2,6 +2,11 @@
 -- 智能食堂点餐与取餐微服务系统 — 数据库初始化脚本
 -- ============================================================
 
+SET NAMES utf8mb4;
+SET character_set_client = utf8mb4;
+SET character_set_connection = utf8mb4;
+SET character_set_results = utf8mb4;
+
 CREATE DATABASE IF NOT EXISTS smart_canteen
     DEFAULT CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
@@ -132,18 +137,18 @@ CREATE TABLE IF NOT EXISTS pickup_queue (
 -- 密码统一为 123456（BCrypt 加密，使用 Spring Security BCryptPasswordEncoder 生成）
 INSERT INTO users (phone, student_no, password, nickname, role, status) VALUES
 ('13800000001', '2024001', '$2a$10$xiZtRmYtYAvlZkmBKRQQTObXognvwDo5gaf6p.VaRJMk/Un6VlF9i', '张三', 'STUDENT',  'NORMAL'),
-('13800000002', '2024002', '$2a$10$xiZtRmYtYAvlZkmBKRQQTObXognvwDo5gaf6p.VaRJMk/Un6VlF9i', '李老板', 'MERCHANT', 'NORMAL'),
+('13800000002', '2024002', '$2a$10$xiZtRmYtYAvlZkmBKRQQTObXognvwDo5gaf6p.VaRJMk/Un6VlF9i', '李四', 'MERCHANT', 'NORMAL'),
 ('13800000003', '2024003', '$2a$10$xiZtRmYtYAvlZkmBKRQQTObXognvwDo5gaf6p.VaRJMk/Un6VlF9i', '管理员', 'ADMIN',    'NORMAL');
 
 -- 5 个演示菜品
 INSERT INTO dishes (name, price, description, stock, warning_stock, status) VALUES
-('红烧肉',   25.00, '经典红烧肉，肥而不腻',   50, 10, 'ON_SALE'),
-('番茄炒蛋', 12.00, '酸甜可口，下饭神器',     80, 15, 'ON_SALE'),
-('宫保鸡丁', 22.00, '麻辣鲜香，经典川菜',     40, 8,  'ON_SALE'),
-('清炒时蔬', 10.00, '当季新鲜蔬菜',          100, 20, 'ON_SALE'),
-('紫菜蛋花汤', 8.00, '清淡鲜美',             60, 10, 'ON_SALE');
+('红烧牛肉饭',   25.00, '经典红烧牛肉套餐，牛肉软烂入味，适合午餐',   50, 10, 'ON_SALE'),
+('番茄鸡蛋面',   12.00, '酸甜可口的番茄鸡蛋面，分量适中',           80, 15, 'ON_SALE'),
+('宫保鸡丁盖饭', 22.00, '微辣口味，鸡丁鲜嫩，搭配米饭',             40, 8,  'ON_SALE'),
+('蔬菜沙拉',     10.00, '清爽低脂，适合晚餐和轻食',                100, 20, 'ON_SALE'),
+('豆浆油条套餐',  8.00, '早餐经典组合，包含豆浆和油条',             60, 10, 'ON_SALE');
 
 -- 2 个取餐窗口
 INSERT INTO pickup_windows (name, location, status) VALUES
-('1号窗口', '一楼A区', 'ACTIVE'),
-('2号窗口', '二楼B区', 'ACTIVE');
+('一号取餐窗口', '一楼A区', 'ACTIVE'),
+('二号取餐窗口', '一楼B区', 'ACTIVE');

@@ -118,7 +118,7 @@ cd deploy
 docker compose up -d
 ```
 
-启动 MySQL 8 (:3306)、Redis 7 (:6379)、Nacos 2.3.2 (:8848)，并自动初始化数据库和演示数据。
+启动 MySQL 8 (:3307)、Redis 7 (:6379)、Nacos 2.3.2 (:8848)，并自动初始化数据库和演示数据。
 
 确认容器状态：
 
@@ -160,6 +160,82 @@ mvn -pl gateway-service spring-boot:run
 浏览器打开 Nacos 控制台：http://localhost:8848/nacos（账号密码：`nacos`/`nacos`）
 
 在「服务管理 → 服务列表」中，应看到 5 个服务实例。
+
+## 一键启动后端
+
+项目提供了一键启动/停止脚本，位于 `scripts/` 目录，自动完成基础设施启动、项目编译、微服务依次启动。
+
+### 启动
+
+**PowerShell（推荐）：**
+
+```powershell
+.\scripts\start-backend.ps1
+```
+
+**CMD：** 双击 `scripts\start-backend.bat`
+
+脚本会自动执行以下步骤：
+
+1. 检查 `docker`、`java`、`mvn` 命令是否可用
+2. 执行 `docker compose up -d` 启动 MySQL (:3307)、Redis (:6379)、Nacos (:8848)
+3. 等待基础设施端口就绪
+4. 执行 `mvn clean package -DskipTests` 编译项目
+5. 按 `user-service → menu-service → order-service → pickup-service → gateway-service` 顺序启动
+6. 每个服务以 `java -Dfile.encoding=UTF-8 -jar` 方式后台运行
+7. 启动前检查端口是否已被占用，已占用则跳过
+8. 输出服务访问地址和日志目录
+
+### 停止
+
+**PowerShell（推荐）：**
+
+```powershell
+# 仅停止微服务
+.\scripts\stop-backend.ps1
+
+# 同时关闭 Docker 基础设施（MySQL/Redis/Nacos）
+.\scripts\stop-backend.ps1 -WithDocker
+```
+
+**CMD：** 双击 `scripts\stop-backend.bat`
+
+脚本按 `gateway-service → pickup-service → order-service → menu-service → user-service` 逆序停止，确保无依赖残留。
+
+### 日志位置
+
+| 内容 | 路径 |
+|------|------|
+| 服务标准输出 | `logs/<service-name>.log` |
+| 服务标准错误 | `logs/<service-name>.err.log` |
+| 服务 PID | `logs/pids/<service-name>.pid` |
+| 启动脚本日志 | `logs/startup.log` |
+
+### 常见问题
+
+**3306 端口冲突**
+
+如果本机已安装 MySQL 占用 3306 端口，项目 Docker 使用 3307 映射，不受影响。所有服务 application.yml 中 JDBC 连接地址已配置为 `localhost:3307`。
+
+如果 3307 端口也被占用，修改 `deploy/docker-compose.yml` 中 MySQL 的 `ports` 映射为其他端口，并同步修改所有 `application.yml` 中的 JDBC 端口。
+
+**服务端口被占用**
+
+启动脚本会自动检查端口，如果端口已被监听则跳过该服务。如需重新启动，先执行 `stop-backend.ps1`，再确认端口已释放。
+
+**中文乱码**
+
+所有 JDBC 连接已配置 `characterEncoding=utf8&connectionCollation=utf8mb4_unicode_ci`，Java 启动参数已添加 `-Dfile.encoding=UTF-8`，`application.yml` 已配置 `server.servlet.encoding.charset=UTF-8`。
+
+如果仍有乱码，检查 MySQL 容器字符集：
+
+```bash
+docker exec smart-canteen-mysql mysql -uroot -proot -e "SHOW VARIABLES LIKE 'character%';"
+```
+
+**Nacos 未启动**
+
+等待 Nacos 完全启动需要约 30-60 秒。如果服务启动后报 Nacos 连接错误，等待片刻后重试启动对应服务。可访问 http://localhost:8848/nacos 确认 Nacos 已就绪。
 
 ## 主要接口列表
 
@@ -237,7 +313,7 @@ mvn -pl gateway-service spring-boot:run
 ### 步骤 1：学生登录
 
 ```bash
-curl -s -X POST http://localhost:8080/api/users/login \
+curl.exe -s -X POST http://localhost:8080/api/users/login \
   -H "Content-Type: application/json" \
   -d '{"phone":"13800000001","password":"123456"}'
 ```
@@ -308,7 +384,7 @@ curl -s -X POST http://localhost:8080/api/orders \
 ### 步骤 4：商家登录
 
 ```bash
-curl -s -X POST http://localhost:8080/api/users/login \
+curl.exe -s -X POST http://localhost:8080/api/users/login \
   -H "Content-Type: application/json" \
   -d '{"phone":"13800000002","password":"123456"}'
 ```

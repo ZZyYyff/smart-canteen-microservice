@@ -25,6 +25,10 @@ deploy/mysql-data/
 deploy/redis-data/
 deploy/nacos-data/
 
+# ====== Node ======
+node_modules/
+dist/
+
 # ====== Config (敏感配置) ======
 .env
 application-local.yml
