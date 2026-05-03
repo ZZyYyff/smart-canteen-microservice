@@ -35,6 +35,7 @@ const routes = [
       { path: 'orders', name: 'StudentOrders', component: () => import('@/views/student/Orders.vue') },
       { path: 'orders/:id', name: 'StudentOrderDetail', component: () => import('@/views/student/OrderDetail.vue') },
       { path: 'profile', name: 'StudentProfile', component: () => import('@/views/student/Profile.vue') },
+      { path: 'dishes/:id', name: 'StudentDishDetail', component: () => import('@/views/student/DishDetail.vue') },
     ],
   },
   {
@@ -47,6 +48,7 @@ const routes = [
       { path: 'menu', name: 'MerchantMenu', component: () => import('@/views/merchant/MenuManage.vue') },
       { path: 'orders', name: 'MerchantOrders', component: () => import('@/views/merchant/OrderManage.vue') },
       { path: 'pickup', name: 'MerchantPickup', component: () => import('@/views/merchant/PickupManage.vue') },
+      { path: 'daily-menu', name: 'MerchantDailyMenu', component: () => import('@/views/merchant/DailyMenuManage.vue'), meta: { role: 'MERCHANT' } },
     ],
   },
   {
@@ -59,11 +61,13 @@ const routes = [
       { path: 'users', name: 'AdminUsers', component: () => import('@/views/admin/UserManage.vue') },
       { path: 'menus', name: 'AdminMenus', component: () => import('@/views/admin/MenuManage.vue') },
       { path: 'system', name: 'AdminSystem', component: () => import('@/views/admin/SystemConfig.vue') },
+      { path: 'windows', name: 'AdminWindows', component: () => import('@/views/admin/WindowManage.vue') },
+      { path: 'daily-menus', name: 'AdminDailyMenus', component: () => import('@/views/merchant/DailyMenuManage.vue') },
     ],
   },
   {
     path: '/',
-    redirect: '/student/home',
+    redirect: '/login',
   },
 ]
 
@@ -88,7 +92,8 @@ router.beforeEach((to, from, next) => {
   }
 
   // 已登录用户访问 guest 页面（login/register），跳转对应角色首页
-  if (to.meta.guest && authStore.isLoggedIn) {
+  // 但从根路径 / 重定向过来的不踢走，允许用户停留在登录页
+  if (to.meta.guest && authStore.isLoggedIn && from.path !== '/') {
     const target = ROLE_HOME[authStore.role] || '/student/home'
     next(target)
     return
@@ -111,13 +116,6 @@ router.beforeEach((to, from, next) => {
   if (routeRole && authStore.role !== routeRole) {
     const target = ROLE_HOME[authStore.role] || '/login'
     ElMessage.warning('您没有权限访问该页面，已跳转到对应首页')
-    next(target)
-    return
-  }
-
-  // 默认 / 路径：按角色跳转
-  if (to.path === '/') {
-    const target = ROLE_HOME[authStore.role] || '/student/home'
     next(target)
     return
   }

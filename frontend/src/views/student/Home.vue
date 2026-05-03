@@ -1,7 +1,6 @@
 <template>
   <div class="student-home">
-    <h2 class="page-title">你好，{{ authStore.userInfo?.nickname || '同学' }}</h2>
-    <p class="page-subtitle">欢迎使用智能食堂点餐系统</p>
+    <h2 class="page-title">{{ authStore.userInfo?.nickname || '同学' }}，今天吃什么？</h2>
 
     <el-row :gutter="16" class="mb-20">
       <el-col :xs="12" :sm="6">

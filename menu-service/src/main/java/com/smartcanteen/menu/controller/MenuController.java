@@ -10,8 +10,10 @@ import com.smartcanteen.menu.vo.DailyMenuVO;
 import com.smartcanteen.menu.vo.DishVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -99,5 +101,27 @@ public class MenuController {
     @GetMapping("/today")
     public Result<List<DailyMenuVO>> getTodayMenu() {
         return Result.success(dailyMenuService.getTodayMenu());
+    }
+
+    /** 查询每日菜单列表（支持按日期、餐次筛选） */
+    @GetMapping("/daily")
+    public Result<List<DailyMenuVO>> listDailyMenus(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate menuDate,
+            @RequestParam(required = false) String mealPeriod) {
+        return Result.success(dailyMenuService.list(menuDate, mealPeriod));
+    }
+
+    /** 编辑每日菜单 */
+    @PutMapping("/daily/{id}")
+    public Result<DailyMenuVO> updateDailyMenu(@PathVariable Long id,
+                                                @Valid @RequestBody DailyMenuDTO dto) {
+        return Result.success("修改成功", dailyMenuService.update(id, dto));
+    }
+
+    /** 删除每日菜单 */
+    @DeleteMapping("/daily/{id}")
+    public Result<Void> deleteDailyMenu(@PathVariable Long id) {
+        dailyMenuService.delete(id);
+        return Result.success();
     }
 }

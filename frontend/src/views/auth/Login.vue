@@ -2,7 +2,7 @@
   <div class="login-container">
     <div class="login-card card">
       <h1 class="login-title">智能食堂点餐与取餐系统</h1>
-      <p class="login-subtitle">欢迎回来，请登录您的账号</p>
+      <p class="login-subtitle">请登录</p>
 
       <el-form
         ref="formRef"
@@ -104,7 +104,7 @@ async function handleLogin() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #ECFDF5 0%, #F0FDFA 50%, #CCFBF1 100%);
+  background: var(--primary-lighter);
   padding: 20px;
 }
 

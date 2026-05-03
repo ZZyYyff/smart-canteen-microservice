@@ -6,6 +6,8 @@ import com.smartcanteen.user.dto.UpdateUserDTO;
 import com.smartcanteen.user.vo.LoginVO;
 import com.smartcanteen.user.vo.UserVO;
 
+import java.util.Map;
+
 /**
  * 用户服务接口
  */
@@ -25,4 +27,16 @@ public interface UserService {
 
     /** 修改当前用户信息 */
     UserVO updateCurrentUser(Long userId, UpdateUserDTO dto);
+
+    /** 管理员查询用户列表 */
+    Map<String, Object> getAdminUserList(String keyword, String role, String status, int page, int size);
+
+    /** 管理员启用用户 */
+    void enableUser(Long adminId, Long userId);
+
+    /** 管理员禁用用户 */
+    void disableUser(Long adminId, Long userId);
+
+    /** 管理员修改用户角色 */
+    void updateUserRole(Long adminId, Long userId, String role);
 }

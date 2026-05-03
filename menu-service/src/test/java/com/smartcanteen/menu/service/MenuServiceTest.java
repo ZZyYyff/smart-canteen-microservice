@@ -259,4 +259,138 @@ class MenuServiceTest {
                 () -> dishService.getById(999L));
         assertEquals("菜品不存在", ex.getMessage());
     }
+
+    // ==================== 每日菜单 CRUD 测试 ====================
+
+    private DailyMenu createTestMenu(Long id, LocalDate date, String period) {
+        DailyMenu menu = new DailyMenu();
+        menu.setId(id);
+        menu.setMenuDate(date);
+        menu.setMealPeriod(period);
+        menu.setStartTime(LocalTime.of(11, 0));
+        menu.setEndTime(LocalTime.of(13, 0));
+        menu.setStatus("ACTIVE");
+        return menu;
+    }
+
+    private Dish createTestDish(Long id, String name) {
+        Dish d = new Dish();
+        d.setId(id); d.setName(name); d.setPrice(BigDecimal.TEN);
+        d.setStock(20); d.setWarningStock(0); d.setStatus("ON_SALE");
+        return d;
+    }
+
+    @Test
+    @DisplayName("13. 查询每日菜单列表成功")
+    void testListDailyMenus() {
+        DailyMenu menu = createTestMenu(1L, LocalDate.now(), "LUNCH");
+        when(dailyMenuMapper.selectList(any(LambdaQueryWrapper.class)))
+                .thenReturn(List.of(menu));
+        when(dailyMenuItemMapper.selectList(any(LambdaQueryWrapper.class)))
+                .thenReturn(List.of());
+        when(dishMapper.selectBatchIds(anyList())).thenReturn(List.of());
+
+        List<DailyMenuVO> results = dailyMenuService.list(null, null);
+        assertEquals(1, results.size());
+        assertEquals("LUNCH", results.get(0).getMealPeriod());
+    }
+
+    @Test
+    @DisplayName("14. 按日期查询每日菜单成功")
+    void testListDailyMenusByDate() {
+        DailyMenu menu = createTestMenu(1L, LocalDate.now(), "BREAKFAST");
+        when(dailyMenuMapper.selectList(any(LambdaQueryWrapper.class)))
+                .thenReturn(List.of(menu));
+        when(dailyMenuItemMapper.selectList(any(LambdaQueryWrapper.class)))
+                .thenReturn(List.of());
+        when(dishMapper.selectBatchIds(anyList())).thenReturn(List.of());
+
+        List<DailyMenuVO> results = dailyMenuService.list(LocalDate.now(), null);
+        assertEquals(1, results.size());
+    }
+
+    @Test
+    @DisplayName("15. 按餐段查询每日菜单成功")
+    void testListDailyMenusByPeriod() {
+        DailyMenu menu = createTestMenu(1L, LocalDate.now(), "DINNER");
+        when(dailyMenuMapper.selectList(any(LambdaQueryWrapper.class)))
+                .thenReturn(List.of(menu));
+        when(dailyMenuItemMapper.selectList(any(LambdaQueryWrapper.class)))
+                .thenReturn(List.of());
+        when(dishMapper.selectBatchIds(anyList())).thenReturn(List.of());
+
+        List<DailyMenuVO> results = dailyMenuService.list(null, "DINNER");
+        assertEquals(1, results.size());
+    }
+
+    @Test
+    @DisplayName("16. 编辑每日菜单成功")
+    void testUpdateDailyMenu() {
+        DailyMenu menu = createTestMenu(1L, LocalDate.now(), "LUNCH");
+        Dish d1 = createTestDish(10L, "菜A");
+        Dish d2 = createTestDish(20L, "菜B");
+
+        when(dailyMenuMapper.selectById(1L)).thenReturn(menu);
+        when(dishMapper.selectBatchIds(List.of(10L, 20L))).thenReturn(List.of(d1, d2));
+        when(dailyMenuMapper.updateById(any(DailyMenu.class))).thenReturn(1);
+        when(dailyMenuItemMapper.delete(any(LambdaQueryWrapper.class))).thenReturn(1);
+        when(dailyMenuItemMapper.insert(any(DailyMenuItem.class))).thenReturn(1);
+
+        DailyMenuDTO dto = new DailyMenuDTO();
+        dto.setMenuDate(LocalDate.now());
+        dto.setMealPeriod("LUNCH");
+        dto.setStartTime(LocalTime.of(11, 0));
+        dto.setEndTime(LocalTime.of(13, 0));
+        dto.setDishIds(List.of(10L, 20L));
+
+        DailyMenuVO result = dailyMenuService.update(1L, dto);
+        assertNotNull(result);
+        assertEquals("LUNCH", result.getMealPeriod());
+        assertEquals(2, result.getDishCount());
+        assertEquals(2, result.getDishes().size());
+
+        verify(dailyMenuMapper).updateById(any(DailyMenu.class));
+        verify(dailyMenuItemMapper).delete(any(LambdaQueryWrapper.class));
+        verify(dailyMenuItemMapper, times(2)).insert(any(DailyMenuItem.class));
+    }
+
+    @Test
+    @DisplayName("17. 编辑不存在的每日菜单失败")
+    void testUpdateDailyMenuNotFound() {
+        when(dailyMenuMapper.selectById(999L)).thenReturn(null);
+
+        DailyMenuDTO dto = new DailyMenuDTO();
+        dto.setMenuDate(LocalDate.now());
+        dto.setMealPeriod("LUNCH");
+        dto.setStartTime(LocalTime.of(11, 0));
+        dto.setEndTime(LocalTime.of(13, 0));
+        dto.setDishIds(List.of(10L));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> dailyMenuService.update(999L, dto));
+        assertEquals("每日菜单不存在", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("18. 删除每日菜单成功")
+    void testDeleteDailyMenu() {
+        DailyMenu menu = createTestMenu(1L, LocalDate.now(), "LUNCH");
+        when(dailyMenuMapper.selectById(1L)).thenReturn(menu);
+        when(dailyMenuItemMapper.delete(any(LambdaQueryWrapper.class))).thenReturn(1);
+        when(dailyMenuMapper.deleteById(1L)).thenReturn(1);
+
+        assertDoesNotThrow(() -> dailyMenuService.delete(1L));
+        verify(dailyMenuItemMapper).delete(any(LambdaQueryWrapper.class));
+        verify(dailyMenuMapper).deleteById(1L);
+    }
+
+    @Test
+    @DisplayName("19. 删除不存在的每日菜单失败")
+    void testDeleteDailyMenuNotFound() {
+        when(dailyMenuMapper.selectById(999L)).thenReturn(null);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> dailyMenuService.delete(999L));
+        assertEquals("每日菜单不存在", ex.getMessage());
+    }
 }

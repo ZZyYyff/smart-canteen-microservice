@@ -2,7 +2,7 @@
   <div class="register-container">
     <div class="register-card card">
       <h1 class="register-title">创建账号</h1>
-      <p class="register-subtitle">注册后即可使用智能食堂点餐服务</p>
+      <p class="register-subtitle">填写信息完成注册</p>
 
       <el-form
         ref="formRef"
@@ -160,7 +160,7 @@ async function handleRegister() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #ECFDF5 0%, #F0FDFA 50%, #CCFBF1 100%);
+  background: var(--primary-lighter);
   padding: 20px;
 }
 

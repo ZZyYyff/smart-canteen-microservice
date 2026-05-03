@@ -108,7 +108,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 20px 40px;
-  border-bottom: 1px solid #374151;
+  border-bottom: 1px solid var(--screen-border);
   flex-shrink: 0;
 }
 
@@ -140,7 +140,7 @@ onUnmounted(() => {
   justify-content: center;
   gap: 8px;
   padding: 10px;
-  background: #F97316;
+  background: var(--warning-color);
   color: #FFF;
   font-size: 15px;
   flex-shrink: 0;
@@ -171,7 +171,7 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-right: 1px solid #374151;
+  border-right: 1px solid var(--screen-border);
   padding: 40px;
 }
 
@@ -184,14 +184,14 @@ onUnmounted(() => {
 .screen-call__number {
   font-size: 160px;
   font-weight: 700;
-  color: #F97316;
+  color: var(--warning-color);
   line-height: 1;
 }
 
 .screen-call__placeholder {
   font-size: 160px;
   font-weight: 700;
-  color: #374151;
+  color: var(--screen-border);
   line-height: 1;
 }
 
@@ -221,7 +221,7 @@ onUnmounted(() => {
   font-weight: 600;
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #374151;
+  border-bottom: 1px solid var(--screen-border);
 }
 
 .screen-queue__empty {
@@ -245,14 +245,14 @@ onUnmounted(() => {
   padding: 14px 16px;
   border-radius: 8px;
   margin-bottom: 8px;
-  background: #1F2937;
+  background: var(--screen-card-bg);
   font-size: 18px;
 }
 
 .queue-item__no {
   font-size: 28px;
   font-weight: 700;
-  color: #F97316;
+  color: var(--warning-color);
   width: 60px;
   text-align: center;
   flex-shrink: 0;
@@ -271,7 +271,7 @@ onUnmounted(() => {
 
 /* ===== Footer ===== */
 .screen-footer {
-  border-top: 1px solid #374151;
+  border-top: 1px solid var(--screen-border);
   padding: 16px 40px;
   text-align: center;
   color: #6B7280;

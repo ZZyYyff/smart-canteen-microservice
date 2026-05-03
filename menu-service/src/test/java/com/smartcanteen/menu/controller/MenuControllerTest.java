@@ -2,10 +2,12 @@ package com.smartcanteen.menu.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartcanteen.common.enums.DishStatus;
+import com.smartcanteen.menu.dto.DailyMenuDTO;
 import com.smartcanteen.menu.dto.DishDTO;
 import com.smartcanteen.menu.dto.StockOperateDTO;
 import com.smartcanteen.menu.service.DailyMenuService;
 import com.smartcanteen.menu.service.DishService;
+import com.smartcanteen.menu.vo.DailyMenuVO;
 import com.smartcanteen.menu.vo.DishVO;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -110,6 +112,45 @@ class MenuControllerTest {
         mockMvc.perform(put("/api/menus/dishes/1/stock/restore")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+    }
+
+    // ==================== 每日菜单 ====================
+
+    private DailyMenuVO dailyMenuVo(Long id) {
+        return DailyMenuVO.builder()
+                .id(id).menuDate(java.time.LocalDate.now())
+                .mealPeriod("LUNCH").mealPeriodDesc("午餐")
+                .status("ACTIVE").dishCount(0).dishes(List.of()).build();
+    }
+
+    @Test
+    @DisplayName("7. 查询每日菜单列表")
+    void testListDailyMenus() throws Exception {
+        when(dailyMenuService.list(null, null)).thenReturn(List.of(dailyMenuVo(1L)));
+
+        mockMvc.perform(get("/api/menus/daily"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1));
+    }
+
+    @Test
+    @DisplayName("8. 按日期查询每日菜单")
+    void testListDailyMenusByDate() throws Exception {
+        when(dailyMenuService.list(java.time.LocalDate.now(), null))
+                .thenReturn(List.of(dailyMenuVo(1L)));
+
+        mockMvc.perform(get("/api/menus/daily")
+                        .param("menuDate", java.time.LocalDate.now().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1));
+    }
+
+    @Test
+    @DisplayName("9. 删除每日菜单成功")
+    void testDeleteDailyMenu() throws Exception {
+        mockMvc.perform(delete("/api/menus/daily/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
     }

@@ -21,6 +21,8 @@ public class DailyMenuVO {
     private LocalTime startTime;
     private LocalTime endTime;
     private String status;
+    /** 该菜单下的菜品数量 */
+    private Integer dishCount;
     /** 该菜单下的菜品列表 */
     private List<DishVO> dishes;
 }

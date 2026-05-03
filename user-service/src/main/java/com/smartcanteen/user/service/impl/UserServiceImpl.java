@@ -21,6 +21,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 用户服务实现
@@ -165,5 +167,87 @@ public class UserServiceImpl implements UserService {
         userMapper.updateById(user);
         log.info("用户信息更新成功: userId={}", userId);
         return UserVO.fromEntity(user);
+    }
+
+    @Override
+    public Map<String, Object> getAdminUserList(String keyword, String role, String status, int page, int size) {
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<User>();
+        if (keyword != null && !keyword.isEmpty()) {
+            wrapper.and(w -> w.like(User::getPhone, keyword)
+                    .or().like(User::getStudentNo, keyword)
+                    .or().like(User::getNickname, keyword));
+        }
+        if (role != null && !role.isEmpty()) {
+            wrapper.eq(User::getRole, role);
+        }
+        if (status != null && !status.isEmpty()) {
+            wrapper.eq(User::getStatus, status);
+        }
+        wrapper.orderByDesc(User::getCreatedAt);
+
+        long total = userMapper.selectCount(wrapper);
+        List<User> users = userMapper.selectList(
+                wrapper.last("LIMIT " + ((page - 1) * size) + ", " + size));
+        List<UserVO> vos = users.stream().map(UserVO::fromEntity).toList();
+
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("total", total);
+        result.put("page", page);
+        result.put("size", size);
+        result.put("list", vos);
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void enableUser(Long adminId, Long userId) {
+        if (adminId.equals(userId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "不能操作自己");
+        }
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "用户不存在");
+        }
+        user.setStatus(UserStatus.NORMAL.name());
+        user.setUpdatedAt(LocalDateTime.now());
+        userMapper.updateById(user);
+        log.info("管理员 {} 启用用户: userId={}", adminId, userId);
+    }
+
+    @Override
+    @Transactional
+    public void disableUser(Long adminId, Long userId) {
+        if (adminId.equals(userId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "不能操作自己");
+        }
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "用户不存在");
+        }
+        user.setStatus(UserStatus.DISABLED.name());
+        user.setUpdatedAt(LocalDateTime.now());
+        userMapper.updateById(user);
+        log.info("管理员 {} 禁用用户: userId={}", adminId, userId);
+    }
+
+    @Override
+    @Transactional
+    public void updateUserRole(Long adminId, Long userId, String role) {
+        if (adminId.equals(userId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "不能操作自己");
+        }
+        try {
+            UserRole.valueOf(role);
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "无效的角色: " + role);
+        }
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "用户不存在");
+        }
+        user.setRole(role);
+        user.setUpdatedAt(LocalDateTime.now());
+        userMapper.updateById(user);
+        log.info("管理员 {} 修改用户角色: userId={}, role={}", adminId, userId, role);
     }
 }

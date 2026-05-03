@@ -20,3 +20,25 @@ export function callNext(windowId: number): Promise<PickupQueueVO> {
 export function verifyPickup(params: { pickupNo: number; pickupCode: string }): Promise<PickupQueueVO> {
   return request.post('/api/pickup/verify', params)
 }
+
+// ==================== 窗口管理 ====================
+
+interface CreateWindowParams {
+  name: string
+  location?: string
+}
+
+/** 新增取餐窗口 */
+export function createWindow(params: CreateWindowParams): Promise<PickupWindowVO> {
+  return request.post('/api/pickup/windows', params)
+}
+
+/** 启用取餐窗口 */
+export function enableWindow(id: number): Promise<void> {
+  return request.put(`/api/pickup/windows/${id}/enable`)
+}
+
+/** 停用取餐窗口 */
+export function disableWindow(id: number): Promise<void> {
+  return request.put(`/api/pickup/windows/${id}/disable`)
+}

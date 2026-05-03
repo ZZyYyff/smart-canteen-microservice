@@ -22,7 +22,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import SideMenu from '@/components/SideMenu.vue'
 import AppHeader from '@/components/AppHeader.vue'
-import { House, User, Food, Setting } from '@element-plus/icons-vue'
+import { House, User, Food, Setting, TakeawayBox, Calendar } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -32,6 +32,8 @@ const menuItems = [
   { path: '/admin/users', title: '用户管理', icon: User },
   { path: '/admin/menus', title: '菜单管理', icon: Food },
   { path: '/admin/system', title: '系统设置', icon: Setting },
+  { path: '/admin/windows', title: '窗口管理', icon: TakeawayBox },
+  { path: '/admin/daily-menus', title: '每日菜单', icon: Calendar },
 ]
 
 function handleLogout() {

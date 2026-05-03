@@ -9,338 +9,188 @@
 
 $ErrorActionPreference = "Stop"
 
-# ---------------------------------------------------------------
-# Paths
-# ---------------------------------------------------------------
-$ProjectRoot = Split-Path -Parent $PSScriptRoot
-$LogDir       = Join-Path $ProjectRoot "logs"
-$PidDir       = Join-Path $LogDir "pids"
-$ComposeFile  = Join-Path $ProjectRoot "deploy\docker-compose.yml"
+# -------- paths --------
+$ScriptDir   = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ProjectRoot = Resolve-Path "$ScriptDir\.."
+$DeployDir   = "$ProjectRoot\deploy"
+$LogDir      = "$ProjectRoot\logs"
+$PidDir      = "$LogDir\pids"
 
-New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
-New-Item -ItemType Directory -Force -Path $PidDir | Out-Null
+# -------- ensure directories --------
+$null = New-Item -ItemType Directory -Force -Path $LogDir
+$null = New-Item -ItemType Directory -Force -Path $PidDir
 
-# ---------------------------------------------------------------
-# Helper: timestamped log
-# ---------------------------------------------------------------
-function Write-Step {
-    param([string]$Msg)
-    $time = Get-Date -Format "HH:mm:ss"
-    Write-Host "[$time] $Msg"
-}
+# -------- service definitions (start order matters) --------
+$services = @(
+    @{ Name="user-service";     Port=9001 },
+    @{ Name="menu-service";     Port=9002 },
+    @{ Name="order-service";    Port=9003 },
+    @{ Name="pickup-service";   Port=9004 },
+    @{ Name="gateway-service";  Port=8080 }
+)
 
-# ---------------------------------------------------------------
-# Helper: test if a TCP port is listening
-# ---------------------------------------------------------------
-function Test-PortOpen {
-    param([string]$HostAddr, [int]$Port)
-    try {
-        $client = New-Object System.Net.Sockets.TcpClient
-        $task = $client.ConnectAsync($HostAddr, $Port)
-        if ($task.Wait(1500)) {
-            $client.Close()
-            $client.Dispose()
-            return $true
+$infraPorts = @(
+    @{ Name="MySQL"; Host="localhost"; Port=3307 },
+    @{ Name="Redis"; Host="localhost"; Port=6379 },
+    @{ Name="Nacos"; Host="localhost"; Port=8848 }
+)
+
+# -------- helpers --------
+function Write-Step { Write-Host "`n>>> $args" -ForegroundColor Cyan }
+
+function Kill-Port {
+    param([int]$Port)
+    $entries = @(netstat -ano 2>$null | Select-String ":$Port " | Select-String "LISTENING")
+    foreach ($e in $entries) {
+        $parts = -split ($e -replace '\s+', ' ')
+        $processId = [int]$parts[-1]
+        if ($processId -and $processId -ne 0) {
+            Write-Host "  Stopping PID $processId on port ${Port}..."
+            Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue | Out-Null
         }
-        $client.Close()
-        $client.Dispose()
-        return $false
-    } catch {
-        return $false
     }
 }
 
-# ---------------------------------------------------------------
-# Helper: wait for a TCP port with timeout
-# ---------------------------------------------------------------
+function Kill-Service-ByName {
+    param([string]$Keyword)
+    Get-WmiObject Win32_Process -Filter "name='java.exe' or name='java'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -match $Keyword } |
+        ForEach-Object {
+            Write-Host "  Stopping $Keyword (PID $($_.ProcessId))..."
+            Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue | Out-Null
+        }
+}
+
+function Kill-PidFile {
+    param([string]$ServiceName)
+    $pidFile = "$PidDir\$ServiceName.pid"
+    if (Test-Path $pidFile) {
+        $processId = [int](Get-Content $pidFile -Raw).Trim()
+        if ($processId -gt 0) {
+            try   { Stop-Process -Id $processId -Force -ErrorAction Stop | Out-Null }
+            catch { Write-Host "  PID $processId already stopped" }
+        }
+        Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Wait-Port {
-    param(
-        [string]$Name,
-        [string]$HostName,
-        [int]$Port,
-        [int]$TimeoutSeconds = 90
-    )
+    param([string]$Name, [string]$HostName, [int]$Port, [int]$TimeoutSec = 90)
+    Write-Host "  Waiting for $Name on ${HostName}:${Port} ..." -NoNewline
     $elapsed = 0
-    while ($elapsed -lt $TimeoutSeconds) {
-        if (Test-PortOpen -HostAddr $HostName -Port $Port) {
-            Write-Step "$Name ${HostName}:$Port is ready"
-            return $true
-        }
-        Start-Sleep -Seconds 2
-        $elapsed += 2
-    }
-    Write-Step "ERROR: $Name ${HostName}:$Port not ready after ${TimeoutSeconds}s"
-    return $false
-}
-
-# ---------------------------------------------------------------
-# Helper: stop a process by PID
-# ---------------------------------------------------------------
-function Stop-ByProcessId {
-    param([int]$ProcessId, [string]$Label)
-    try {
-        $proc = Get-Process -Id $ProcessId -ErrorAction Stop
-        Write-Step "  Stopping $Label (PID=$ProcessId) ..."
-        $proc.Kill()
-        $proc.WaitForExit(3000)
-        Write-Step "  Stopped $Label (PID=$ProcessId)"
-    } catch {
-        Write-Step "  $Label PID=$ProcessId not running, skip"
-    }
-}
-
-# ---------------------------------------------------------------
-# Helper: stop processes listening on a given port
-# ---------------------------------------------------------------
-function Stop-ByPort {
-    param([string]$Label, [int]$Port)
-    try {
-        $conn = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue `
-            | Select-Object -First 1
-        if ($conn) {
-            $targetId = $conn.OwningProcess
-            if ($targetId -and $targetId -ne 0) {
-                Stop-ByProcessId -ProcessId $targetId -Label "$Label (port $Port)"
+    while ($elapsed -lt $TimeoutSec) {
+        try {
+            $tcp = New-Object System.Net.Sockets.TcpClient
+            if ($tcp.ConnectAsync($HostName, $Port).Wait(1000)) {
+                $tcp.Close()
+                Write-Host " OK (${elapsed}s)" -ForegroundColor Green
                 return
             }
-        }
-    } catch { }
-    Write-Step "  Port $Port is free, skip $Label"
-}
-
-# ---------------------------------------------------------------
-# Helper: kill java.exe processes by command-line keywords
-# ---------------------------------------------------------------
-function Stop-JavaByKeyword {
-    param([string[]]$Keywords)
-    try {
-        $allJava = Get-CimInstance Win32_Process -Filter "Name='java.exe'" -ErrorAction SilentlyContinue
-        if (-not $allJava) { return }
-        $matched = @($allJava | Where-Object {
-            $cmd = $_.CommandLine
-            if (-not $cmd) { return $false }
-            foreach ($k in $Keywords) {
-                if ($cmd.IndexOf($k, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
-                    return $true
-                }
-            }
-            return $false
-        })
-        foreach ($p in $matched) {
-            $cid = $p.ProcessId
-            Write-Step "  Found leftover java.exe PID=$cid, killing..."
-            Stop-Process -Id $cid -Force -ErrorAction SilentlyContinue
-            Write-Step "  Killed PID=$cid"
-        }
-        if ($matched.Count -eq 0) {
-            Write-Step "  No leftover java.exe processes found"
-        }
-    } catch {
-        Write-Step "  WMI query failed: $_"
+            $tcp.Close()
+        } catch { }
+        Start-Sleep -Seconds 1
+        $elapsed++
+        Write-Host "." -NoNewline
     }
+    throw "$Name did not start on ${HostName}:${Port} within ${TimeoutSec}s"
 }
 
-# ===============================================================
-#  STEP 1 — Check prerequisites
-# ===============================================================
-Write-Step "===== Step 1: Prerequisites ====="
-$missing = @()
-foreach ($cmd in @("docker", "java", "mvn")) {
-    $found = Get-Command $cmd -ErrorAction SilentlyContinue
-    if ($found) {
-        Write-Step "  OK: $cmd"
-    } else {
-        Write-Step "  MISSING: $cmd"
-        $missing += $cmd
-    }
-}
-if ($missing.Count -gt 0) {
-    Write-Step "FATAL: Missing commands: $($missing -join ', ')"
-    exit 1
-}
-
-# ===============================================================
-#  STEP 2 — Stop old backend processes
-# ===============================================================
-Write-Step "===== Step 2: Stop old backend processes ====="
-
-$portMap = @(
-    @{Label="gateway-service"; Port=8080},
-    @{Label="pickup-service";  Port=9004},
-    @{Label="order-service";   Port=9003},
-    @{Label="menu-service";    Port=9002},
-    @{Label="user-service";    Port=9001}
-)
-
-Write-Step "--- 2a: Stop by port ---"
-foreach ($entry in $portMap) {
-    Stop-ByPort -Label $entry.Label -Port $entry.Port
-}
-
-Write-Step "--- 2b: Stop by java command line ---"
-Stop-JavaByKeyword -Keywords @(
-    "smart-canteen",
-    "gateway-service",
-    "pickup-service",
-    "order-service",
-    "menu-service",
-    "user-service"
-)
-
-Write-Step "--- 2c: Clean PID files ---"
-Get-ChildItem -Path $PidDir -Filter "*.pid" -ErrorAction SilentlyContinue `
-    | ForEach-Object { Remove-Item $_.FullName -Force }
-
-Start-Sleep -Seconds 3
-Write-Step "Old processes cleaned up"
-
-# ===============================================================
-#  STEP 3 — Start Docker infrastructure
-# ===============================================================
-Write-Step "===== Step 3: Docker compose up ====="
-Push-Location (Join-Path $ProjectRoot "deploy")
-
-$prevEAP = $ErrorActionPreference
-$ErrorActionPreference = "Continue"
-
-& docker compose up -d
-$dockerExit = $LASTEXITCODE
-
-$ErrorActionPreference = $prevEAP
-Pop-Location
-
-if ($dockerExit -ne 0) {
-    Write-Step "FATAL: docker compose failed (exit=$dockerExit)"
-    exit 1
-}
-Write-Step "Docker compose started successfully"
-
-# ===============================================================
-#  STEP 4 — Wait for infrastructure ports
-# ===============================================================
-Write-Step "===== Step 4: Wait for infrastructure ports ====="
-$allReady = $true
-$allReady = (Wait-Port -Name "MySQL" -HostName "localhost" -Port 3307 -TimeoutSeconds 90) -and $allReady
-$allReady = (Wait-Port -Name "Redis" -HostName "localhost" -Port 6379 -TimeoutSeconds 60) -and $allReady
-$allReady = (Wait-Port -Name "Nacos" -HostName "localhost" -Port 8848 -TimeoutSeconds 90) -and $allReady
-
-if (-not $allReady) {
-    Write-Step "FATAL: Infrastructure ports not ready"
-    exit 1
-}
-
-Write-Step "Wait extra 5s for Nacos to fully start..."
-Start-Sleep -Seconds 5
-
-# ===============================================================
-#  STEP 5 — Build project
-# ===============================================================
-Write-Step "===== Step 5: mvn clean package ====="
-Push-Location $ProjectRoot
-
-$prevEAP = $ErrorActionPreference
-$ErrorActionPreference = "Continue"
-
-& mvn clean package -DskipTests
-$mvnExit = $LASTEXITCODE
-
-$ErrorActionPreference = $prevEAP
-Pop-Location
-
-if ($mvnExit -ne 0) {
-    Write-Step "FATAL: Build failed (exit=$mvnExit)"
-    exit 1
-}
-Write-Step "Build succeeded"
-
-# ===============================================================
-#  STEP 6 — Start microservices with mvn spring-boot:run
-# ===============================================================
-Write-Step "===== Step 6: Start microservices (mvn spring-boot:run) ====="
-
-$services = @(
-    @{Name="user-service";    Port=9001},
-    @{Name="menu-service";    Port=9002},
-    @{Name="order-service";   Port=9003},
-    @{Name="pickup-service";  Port=9004},
-    @{Name="gateway-service"; Port=8080}
-)
-
+# ============================================================
+# STEP 1 — stop old services
+# ============================================================
+Write-Step "Stopping old backend services..."
 foreach ($svc in $services) {
-    $svcName = $svc.Name
-    $svcPort = $svc.Port
-    Write-Step "--- $svcName :$svcPort ---"
+    Write-Host "  [$($svc.Name)]"
+    Kill-PidFile    $svc.Name
+    Kill-Port       $svc.Port
+    Kill-Service-ByName $svc.Name
+}
+Start-Sleep -Seconds 2
 
-    # Check if port already in use
-    if (Test-PortOpen -HostAddr "127.0.0.1" -Port $svcPort) {
-        Write-Step "  Port $svcPort already in use, skip $svcName"
-        continue
-    }
+# ============================================================
+# STEP 2 — start Docker infrastructure
+# ============================================================
+Write-Step "Starting Docker infrastructure..."
+Push-Location $DeployDir
+$prevEA = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+& docker compose up -d
+$dockerCode = $LASTEXITCODE
+$ErrorActionPreference = $prevEA
+Pop-Location
+if ($dockerCode -ne 0) {
+    throw "docker compose up -d failed (exit code $dockerCode)"
+}
 
-    # Log files
-    $outLog = Join-Path $LogDir "${svcName}.out.log"
-    $errLog = Join-Path $LogDir "${svcName}.err.log"
-    $pidFile = Join-Path $PidDir "${svcName}.pid"
+# ============================================================
+# STEP 3 — wait for infra ports
+# ============================================================
+Write-Step "Waiting for infrastructure ports..."
+foreach ($inf in $infraPorts) {
+    Wait-Port -Name $inf.Name -HostName $inf.Host -Port $inf.Port
+}
 
-    # Start with mvn spring-boot:run (same as manual startup)
-    Write-Step "  Starting: mvn -pl $svcName spring-boot:run"
+# ============================================================
+# STEP 4 — build project
+# ============================================================
+Write-Step "Building project (mvn clean package -DskipTests)..."
+Push-Location $ProjectRoot
+mvn clean package -DskipTests
+if ($LASTEXITCODE -ne 0) {
+    Pop-Location
+    throw "Maven build failed"
+}
+Pop-Location
+
+# ============================================================
+# STEP 5 — start microservices
+# ============================================================
+Write-Step "Starting microservices (mvn spring-boot:run)..."
+foreach ($svc in $services) {
+    Write-Host ""
+    Write-Host "--- Starting $($svc.Name) on port $($svc.Port) ---"
+    $outLog = "$LogDir\$($svc.Name).out.log"
+    $errLog = "$LogDir\$($svc.Name).err.log"
+    $pidFile = "$PidDir\$($svc.Name).pid"
+
+    $proc = Start-Process -FilePath "mvn" `
+        -ArgumentList "-pl","$($svc.Name)","spring-boot:run" `
+        -WorkingDirectory $ProjectRoot `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput $outLog `
+        -RedirectStandardError $errLog `
+        -PassThru
+
+    $proc.Id | Out-File -FilePath $pidFile -Encoding ASCII
+    Write-Host "  Started PID $($proc.Id), logs: $outLog"
+
     try {
-        $prevEAP = $ErrorActionPreference
-        $ErrorActionPreference = "Continue"
-
-        $proc = Start-Process -FilePath "mvn" `
-            -ArgumentList @(
-                "-pl", $svcName,
-                "spring-boot:run"
-            ) `
-            -WorkingDirectory $ProjectRoot `
-            -NoNewWindow `
-            -RedirectStandardOutput $outLog `
-            -RedirectStandardError $errLog `
-            -PassThru
-
-        $ErrorActionPreference = $prevEAP
-
-        # Wait for the service port to become available
-        Write-Step "  Waiting for port $svcPort ..."
-        $portReady = Wait-Port -Name $svcName -HostName "127.0.0.1" -Port $svcPort -TimeoutSeconds 90
-
-        if (-not $portReady) {
-            Write-Step "  ===== ERROR: $svcName failed to start ====="
-            Write-Step "  Port: $svcPort"
-            Write-Step "  Error log: $errLog"
-            Write-Step "  --- Last 50 lines of error log ---"
-            if (Test-Path $errLog) {
-                $tail = Get-Content $errLog -Tail 50 -ErrorAction SilentlyContinue
-                foreach ($line in $tail) { Write-Step "  $line" }
-            } else {
-                Write-Step "  (error log file not found)"
-            }
-            Write-Step "  --- End of error log ---"
-            continue
-        }
-
-        Write-Step "  OK: $svcName port $svcPort is listening, PID=$($proc.Id)"
-        $proc.Id | Out-File -FilePath $pidFile -NoNewline -Encoding ASCII
+        Wait-Port -Name $($svc.Name) -HostName "localhost" -Port $($svc.Port) -TimeoutSec 90
     } catch {
-        Write-Step "  ERROR: failed to start $svcName : $_"
+        Write-Host "`n[ERROR] $($svc.Name) failed to listen on port $($svc.Port)" -ForegroundColor Red
+        Write-Host "[ERROR] --- Last 80 lines of $errLog ---" -ForegroundColor Red
+        if (Test-Path $errLog) { Get-Content $errLog -Tail 80 | ForEach-Object { Write-Host $_ -ForegroundColor Red } }
+        Write-Host "[ERROR] --- Last 80 lines of $outLog ---" -ForegroundColor Red
+        if (Test-Path $outLog) { Get-Content $outLog -Tail 80 | ForEach-Object { Write-Host $_ -ForegroundColor Red } }
+        throw "$($svc.Name) startup failed"
     }
 }
 
-# ===============================================================
-#  DONE
-# ===============================================================
-Write-Step "===== Startup complete ====="
+# ============================================================
+# STEP 6 — final report
+# ============================================================
 Write-Host ""
-Write-Host "  Gateway (entry) : http://localhost:8080"
-Write-Host "  User Service    : http://localhost:9001"
-Write-Host "  Menu Service    : http://localhost:9002"
-Write-Host "  Order Service   : http://localhost:9003"
-Write-Host "  Pickup Service  : http://localhost:9004"
-Write-Host "  Nacos Console   : http://localhost:8848/nacos  (nacos/nacos)"
+Write-Host "=" * 50 -ForegroundColor Green
+Write-Host "  All services started!" -ForegroundColor Green
+Write-Host "=" * 50 -ForegroundColor Green
 Write-Host ""
-Write-Host "  Logs : $LogDir"
-Write-Host "  PIDs : $PidDir"
+Write-Host "  Gateway:       http://localhost:8080"
+Write-Host "  User Service:  http://localhost:9001"
+Write-Host "  Menu Service:  http://localhost:9002"
+Write-Host "  Order Service: http://localhost:9003"
+Write-Host "  Pickup Service:http://localhost:9004"
+Write-Host "  Nacos:         http://localhost:8848/nacos"
+Write-Host "  MySQL:         localhost:3307"
+Write-Host "  Redis:         localhost:6379"
 Write-Host ""
-Write-Host "  Stop backend: .\scripts\stop-backend.ps1"
-Write-Host "  Stop + Docker: .\scripts\stop-backend.ps1 -WithDocker"
+Write-Host "Verify: Get-NetTCPConnection -LocalPort 8080,9001,9002,9003,9004,3307,6379,8848 -State Listen"

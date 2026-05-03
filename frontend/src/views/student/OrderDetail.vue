@@ -16,7 +16,7 @@
           </el-descriptions-item>
           <el-descriptions-item label="下单时间">{{ order.createdAt || '-' }}</el-descriptions-item>
           <el-descriptions-item label="订单金额">
-            <strong style="color:#EF4444">¥{{ order.totalAmount ?? '0.00' }}</strong>
+            <strong class="text-price">¥{{ order.totalAmount ?? '0.00' }}</strong>
           </el-descriptions-item>
           <el-descriptions-item label="取餐号">
             <template v-if="order.pickupNo">

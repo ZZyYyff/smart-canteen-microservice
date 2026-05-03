@@ -23,6 +23,12 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: 6379
 
+order:
+  timeout:
+    created-minutes: 15
+    accepted-minutes: 30
+    scan-interval-ms: 60000
+
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   global-config:

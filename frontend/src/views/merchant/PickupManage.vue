@@ -28,7 +28,7 @@
           </el-select>
 
           <!-- 当前叫号 -->
-          <div v-if="currentCalled" class="current-call card" style="margin-top:16px;background:#FFF7ED;border:2px solid #F97316">
+          <div v-if="currentCalled" class="current-call card mt-16" style="background:#FFF7ED;border:2px solid var(--warning-color)">
             <div class="current-call__label">当前叫号</div>
             <div class="current-call__number">{{ currentCalled.pickupNo }}</div>
             <div class="current-call__info">{{ currentCalled.windowName }}</div>
@@ -185,14 +185,14 @@ async function handleVerify() {
 
 .current-call__label {
   font-size: 14px;
-  color: #F97316;
+  color: var(--warning-color);
   margin-bottom: 8px;
 }
 
 .current-call__number {
   font-size: 64px;
   font-weight: 700;
-  color: #F97316;
+  color: var(--warning-color);
   line-height: 1;
 }
 

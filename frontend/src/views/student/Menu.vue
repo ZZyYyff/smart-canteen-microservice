@@ -31,7 +31,7 @@
             :stock="dish.stock"
             :low-stock="dish.lowStock"
             :out-of-stock="dish.stock === 0"
-            @click="handleAddToCart(dish)"
+            @click="$router.push(`/student/dishes/${dish.id}`)"
           />
           <el-button
             size="small"
@@ -42,6 +42,14 @@
             @click="handleAddToCart(dish)"
           >
             {{ dish.stock === 0 ? '已售罄' : dish.status !== 'ON_SALE' ? '已下架' : '加入购物车' }}
+          </el-button>
+          <el-button
+            size="small"
+            text
+            style="width:100%;margin-top:2px"
+            @click="$router.push(`/student/dishes/${dish.id}`)"
+          >
+            查看详情
           </el-button>
         </el-col>
       </el-row>

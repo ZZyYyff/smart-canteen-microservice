@@ -37,7 +37,7 @@ defineEmits<{
 .dish-card__placeholder {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 50%, #A7F3D0 100%);
+  background: #ECFDF5;
   display: flex;
   align-items: center;
   justify-content: center;

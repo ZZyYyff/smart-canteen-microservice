@@ -22,7 +22,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import SideMenu from '@/components/SideMenu.vue'
 import AppHeader from '@/components/AppHeader.vue'
-import { House, Food, List, TakeawayBox } from '@element-plus/icons-vue'
+import { House, Food, List, TakeawayBox, Calendar } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -32,6 +32,7 @@ const menuItems = [
   { path: '/merchant/menu', title: '菜品管理', icon: Food },
   { path: '/merchant/orders', title: '订单管理', icon: List },
   { path: '/merchant/pickup', title: '叫号核销', icon: TakeawayBox },
+  { path: '/merchant/daily-menu', title: '每日菜单', icon: Calendar },
 ]
 
 function handleLogout() {
