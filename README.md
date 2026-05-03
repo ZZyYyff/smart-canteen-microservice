@@ -2,6 +2,38 @@
 
 面向校园/园区的智能食堂微服务系统，支持**在线点餐**、**商家接单备餐**、**取餐码核销**、**食堂大屏实时显示取餐队列**。本项目为《分布式系统》课程大作业。
 
+## 系统功能
+
+### 学生端
+
+- 注册 / 登录（手机号 + 密码，JWT 双 Token 认证）
+- 浏览今日菜单，按名称搜索菜品
+- 加入购物车，调整数量，选择取餐窗口，提交订单
+- 查看我的订单，查看订单详情（含取餐号、取餐码二维码）
+- 取消未处理的订单
+- 修改个人信息（昵称、手机号）
+
+### 商家端
+
+- 菜品管理：新增、修改、删除、上架、下架、库存管理
+- 每日菜单管理：选择菜品创建当日菜单
+- 订单处理：待接单 → 接单 → 制作中 → 备餐完成，完整状态流转
+- 取餐管理：窗口选择、叫号、取餐码核销
+
+### 管理员端
+
+- 用户管理
+- 全局菜品管理
+- 取餐窗口管理
+- 系统配置查看
+
+### 大屏端
+
+- WebSocket 实时接收叫号推送
+- 全屏深色模式，当前叫号大字显示（160px）
+- 等待队列列表（最多 8 条）
+- 断线自动重连
+
 ## 技术栈
 
 | 类别 | 技术 | 版本 |
@@ -18,14 +50,30 @@
 | 认证 | JWT (jjwt) | 0.12.5 |
 | 加密 | BCrypt (spring-security-crypto) | — |
 | 实时通信 | WebSocket | — |
-| 测试 | JUnit 5 + Mockito | — |
-| 部署 | Docker + K3S | — |
+
+| 类别 | 技术 | 版本 |
+|------|------|------|
+| 框架 | Vue 3 | 3.4.x |
+| 语言 | TypeScript | 5.5.x |
+| 构建 | Vite | 5.3.x |
+| 状态管理 | Pinia | 2.1.x |
+| 路由 | Vue Router | 4.4.x |
+| UI 组件库 | Element Plus | 2.7.x |
+| HTTP 客户端 | Axios | 1.7.x |
+| CSS 预处理 | Sass | 1.77.x |
+
+| 类别 | 技术 |
+|------|------|
+| 容器化 | Docker + Docker Compose |
+| 编排 | K3S (Kubernetes) |
+| 测试 | JUnit 5 + Mockito |
+| 构建 | Maven |
 
 ## 微服务模块说明
 
 | 模块 | 端口 | 职责 |
 |------|:---:|------|
-| `common` | — | 公共模块：Result、BusinessException、JwtUtil、枚举（7种） |
+| `common` | — | 公共模块：Result、BusinessException、JwtUtil、枚举 |
 | `gateway-service` | 8080 | API 网关：路由转发、JWT 校验、Redis 限流 |
 | `user-service` | 9001 | 用户服务：注册、登录（JWT 双 Token）、个人信息修改 |
 | `menu-service` | 9002 | 菜品服务：CRUD、上下架、原子库存扣减/恢复、每日菜单 |
@@ -47,7 +95,7 @@ graph TB
     end
 
     subgraph 基础设施
-        MySQL[(MySQL 8 :3306)]
+        MySQL[(MySQL 8 :3307)]
         Redis[(Redis 7 :6379)]
         Nacos[Nacos :8848]
     end
@@ -109,7 +157,38 @@ sequenceDiagram
     PS-->>C: 核销成功
 ```
 
+## 目录结构
+
+```
+smart-canteen/
+├── common/                # 公共模块（Result、JwtUtil、枚举、异常）
+├── gateway-service/       # API 网关（路由、JWT、限流）
+├── user-service/          # 用户服务
+├── menu-service/          # 菜品与菜单服务
+├── order-service/         # 订单服务
+├── pickup-service/        # 取餐与排队服务
+├── frontend/              # Vue 3 前端
+│   └── README.md          # 前端说明文档
+├── deploy/                # Docker Compose 与初始化 SQL
+│   └── README.md          # 部署说明
+├── k8s/                   # K3S / Kubernetes 部署 YAML
+│   └── README.md          # K3S 部署说明
+├── scripts/               # 一键启动/停止脚本
+│   └── README.md          # 脚本说明
+├── docs/                  # 课程文档（需求、设计、测试等）
+│   └── README.md          # 文档目录
+├── logs/                  # 运行时日志（自动生成）
+└── README.md              # 本文件
+```
+
 ## 本地启动
+
+### 前提条件
+
+- Docker Desktop 已安装并运行
+- Java 17+
+- Maven 3.8+
+- Node.js 18+（前端开发）
 
 ### 1. 启动基础设施（Docker）
 
@@ -178,17 +257,15 @@ mvn -pl gateway-service spring-boot:run
 脚本会自动执行以下步骤：
 
 1. 检查 `docker`、`java`、`mvn` 命令是否可用
-2. 执行 `docker compose up -d` 启动 MySQL (:3307)、Redis (:6379)、Nacos (:8848)
-3. 等待基础设施端口就绪
-4. 执行 `mvn clean package -DskipTests` 编译项目
-5. 按 `user-service → menu-service → order-service → pickup-service → gateway-service` 顺序启动
-6. 每个服务以 `java -Dfile.encoding=UTF-8 -jar` 方式后台运行
-7. 启动前检查端口是否已被占用，已占用则跳过
-8. 输出服务访问地址和日志目录
+2. 停止可能残留的旧进程
+3. 执行 `docker compose up -d` 启动 MySQL (:3307)、Redis (:6379)、Nacos (:8848)
+4. 等待基础设施端口就绪（含 Nacos gRPC :9848）
+5. 执行 `mvn clean package -DskipTests` 编译项目
+6. 按 `user-service → menu-service → order-service → pickup-service → gateway-service` 顺序启动（使用 `mvn spring-boot:run`）
+7. 每个服务启动后等待对应端口就绪，超时则输出错误日志尾部
+8. 输出所有服务访问地址
 
 ### 停止
-
-**PowerShell（推荐）：**
 
 ```powershell
 # 仅停止微服务
@@ -198,15 +275,11 @@ mvn -pl gateway-service spring-boot:run
 .\scripts\stop-backend.ps1 -WithDocker
 ```
 
-**CMD：** 双击 `scripts\stop-backend.bat`
-
-脚本按 `gateway-service → pickup-service → order-service → menu-service → user-service` 逆序停止，确保无依赖残留。
-
 ### 日志位置
 
 | 内容 | 路径 |
 |------|------|
-| 服务标准输出 | `logs/<service-name>.log` |
+| 服务标准输出 | `logs/<service-name>.out.log` |
 | 服务标准错误 | `logs/<service-name>.err.log` |
 | 服务 PID | `logs/pids/<service-name>.pid` |
 | 启动脚本日志 | `logs/startup.log` |
@@ -217,25 +290,23 @@ mvn -pl gateway-service spring-boot:run
 
 如果本机已安装 MySQL 占用 3306 端口，项目 Docker 使用 3307 映射，不受影响。所有服务 application.yml 中 JDBC 连接地址已配置为 `localhost:3307`。
 
-如果 3307 端口也被占用，修改 `deploy/docker-compose.yml` 中 MySQL 的 `ports` 映射为其他端口，并同步修改所有 `application.yml` 中的 JDBC 端口。
+**Nacos gRPC 端口未就绪**
+
+脚本已等待 Nacos :9848（gRPC 端口）。如果服务仍报 `UNAVAILABLE: io exception`，说明 Nacos 容器完全初始化需要更长时间，可手动等待 15 秒后重试。
 
 **服务端口被占用**
 
-启动脚本会自动检查端口，如果端口已被监听则跳过该服务。如需重新启动，先执行 `stop-backend.ps1`，再确认端口已释放。
+启动脚本会自动检查端口，如果端口已被监听则跳过该服务。如需重新启动，先执行 `stop-backend.ps1`。
 
 **中文乱码**
 
-所有 JDBC 连接已配置 `characterEncoding=utf8&connectionCollation=utf8mb4_unicode_ci`，Java 启动参数已添加 `-Dfile.encoding=UTF-8`，`application.yml` 已配置 `server.servlet.encoding.charset=UTF-8`。
+所有 JDBC 连接已配置 `characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci`，Java 启动参数已添加 `-Dfile.encoding=UTF-8`，`application.yml` 已配置 `server.servlet.encoding.charset=UTF-8`。
 
 如果仍有乱码，检查 MySQL 容器字符集：
 
 ```bash
 docker exec smart-canteen-mysql mysql -uroot -proot -e "SHOW VARIABLES LIKE 'character%';"
 ```
-
-**Nacos 未启动**
-
-等待 Nacos 完全启动需要约 30-60 秒。如果服务启动后报 Nacos 连接错误，等待片刻后重试启动对应服务。可访问 http://localhost:8848/nacos 确认 Nacos 已就绪。
 
 ## 主要接口列表
 
@@ -313,7 +384,7 @@ docker exec smart-canteen-mysql mysql -uroot -proot -e "SHOW VARIABLES LIKE 'cha
 ### 步骤 1：学生登录
 
 ```bash
-curl.exe -s -X POST http://localhost:8080/api/users/login \
+curl -s -X POST http://localhost:8080/api/users/login \
   -H "Content-Type: application/json" \
   -d '{"phone":"13800000001","password":"123456"}'
 ```
@@ -335,7 +406,7 @@ curl.exe -s -X POST http://localhost:8080/api/users/login \
 记下返回的 `token` 值，后续操作需要在请求头中携带：
 
 ```bash
-TOKEN="<粘贴此处的 accessToken>"
+TOKEN="<粘贴此处的 token>"
 ```
 
 ### 步骤 2：查看菜品列表
@@ -379,12 +450,10 @@ curl -s -X POST http://localhost:8080/api/orders \
 }
 ```
 
-记下订单 ID 和取餐信息。
-
 ### 步骤 4：商家登录
 
 ```bash
-curl.exe -s -X POST http://localhost:8080/api/users/login \
+curl -s -X POST http://localhost:8080/api/users/login \
   -H "Content-Type: application/json" \
   -d '{"phone":"13800000002","password":"123456"}'
 ```
@@ -401,244 +470,42 @@ curl -s -X PUT http://localhost:8080/api/orders/$ORDER_ID/accept \
   -H "Authorization: Bearer $MERCHANT_TOKEN"
 ```
 
-订单状态变更：CREATED → ACCEPTED
-
-### 步骤 6：商家开始制作
+### 步骤 6：制作完成并入队
 
 ```bash
 curl -s -X PUT http://localhost:8080/api/orders/$ORDER_ID/cooking \
   -H "Authorization: Bearer $MERCHANT_TOKEN"
-```
 
-订单状态变更：ACCEPTED → COOKING
-
-### 步骤 7：备餐完成，加入取餐队列
-
-```bash
 curl -s -X PUT http://localhost:8080/api/orders/$ORDER_ID/ready \
   -H "Authorization: Bearer $MERCHANT_TOKEN"
 ```
 
-订单状态变更：COOKING → WAIT_PICKUP；后台自动调用 pickup-service 将订单加入队列。
-
-### 步骤 8：查看窗口排队
-
-```bash
-curl -s http://localhost:8080/api/pickup/windows/1/queue \
-  -H "Authorization: Bearer $MERCHANT_TOKEN"
-```
-
-返回当前 1 号窗口的等待队列，按入队时间升序排列。
-
-### 步骤 9：商家叫号
+### 步骤 7：叫号
 
 ```bash
 curl -s -X POST http://localhost:8080/api/pickup/windows/1/call-next \
   -H "Authorization: Bearer $MERCHANT_TOKEN"
 ```
 
-返回被叫号的记录，同时通过 WebSocket 向大屏推送消息：
-
-```json
-{
-  "type": "CALL",
-  "windowId": 1,
-  "windowName": "1号窗口",
-  "currentPickupNo": 156,
-  "message": "请 156 号到【1号窗口】取餐",
-  ...
-}
-```
-
-### 步骤 10：大屏接收实时推送
-
-使用 WebSocket 客户端连接大屏端点：
-
-```bash
-# 使用 websocat 或浏览器 WebSocket 客户端连接
-websocat ws://localhost:8080/ws/pickup/screen
-```
-
-每次叫号时会收到推送的 JSON 消息。
-
-### 步骤 11：用户取餐核销
+### 步骤 8：取餐核销
 
 ```bash
 curl -s -X POST http://localhost:8080/api/pickup/verify \
-  -H "Authorization: Bearer $TOKEN" \
+  -H "Authorization: Bearer $MERCHANT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"pickupNo": 156, "pickupCode": "482901"}'
 ```
 
-核销成功后，取餐队列状态变为 FINISHED，订单状态变为 COMPLETED。
+## 前端
 
-### 完整流程验证
+前端为 Vue 3 + TypeScript 单页应用，详见 [frontend/README.md](frontend/README.md)。
 
-```bash
-# 查看订单最终状态
-curl -s http://localhost:8080/api/orders/$ORDER_ID \
-  -H "Authorization: Bearer $TOKEN" | grep status
-# "status": "COMPLETED"
-```
-
-## 运行测试
+快速启动：
 
 ```bash
-# 全量测试（104 个用例）
-mvn clean test
-
-# 单模块测试
-mvn -pl common -am test           # 21 tests
-mvn -pl gateway-service -am test  # 8 tests
-mvn -pl user-service -am test     # 19 tests
-mvn -pl menu-service -am test     # 18 tests
-mvn -pl order-service -am test    # 18 tests
-mvn -pl pickup-service -am test   # 20 tests
+cd frontend
+npm install
+npm run dev
 ```
 
-| 模块 | Service 层 | Controller 层 | 合计 |
-|------|:---:|:---:|:---:|
-| common | 21 | — | **21** |
-| gateway-service | 8 | — | **8** |
-| user-service | 14 | 5 | **19** |
-| menu-service | 12 | 6 | **18** |
-| order-service | 12 | 6 | **18** |
-| pickup-service | 14 | 6 | **20** |
-| **合计** | **81** | **23** | **104** |
-
-## K3S 部署
-
-```bash
-# 1. 安装 K3S
-curl -sfL https://get.k3s.io | sh -
-
-# 2. 构建 Docker 镜像
-mvn clean package -DskipTests
-docker build -t smart-canteen/user-service:latest   -f user-service/Dockerfile .
-docker build -t smart-canteen/menu-service:latest    -f menu-service/Dockerfile .
-docker build -t smart-canteen/order-service:latest   -f order-service/Dockerfile .
-docker build -t smart-canteen/pickup-service:latest  -f pickup-service/Dockerfile .
-docker build -t smart-canteen/gateway-service:latest -f gateway-service/Dockerfile .
-
-# 3. 导入镜像到 K3S
-docker save smart-canteen/* -o images.tar
-sudo k3s ctr images import images.tar
-
-# 4. 部署
-kubectl apply -f k8s/
-
-# 5. 查看状态
-kubectl -n smart-canteen get pods
-kubectl -n smart-canteen get svc
-
-# 6. 访问网关
-# gateway-service 通过 NodePort 30080 暴露
-curl http://<NODE_IP>:30080/api/users/login -H "Content-Type: application/json" -d '{"phone":"13800000001","password":"123456"}'
-```
-
-详细说明见 `docs/07-K3S部署方案说明.md`。
-
-## 项目目录结构
-
-```
-smart-canteen/
-├── pom.xml                              # Maven 父 POM（依赖管理）
-├── README.md                            # 本文件
-├── CLAUDE.md                            # AI 编码规则
-│
-├── common/                              # 公共模块
-│   ├── pom.xml
-│   └── src/main/java/com/smartcanteen/common/
-│       ├── enums/                       # 枚举：ErrorCode, OrderStatus,
-│       │                                #   PickupQueueStatus, WindowStatus 等
-│       ├── exception/BusinessException.java
-│       ├── result/Result.java           # 统一返回格式 {code, message, data}
-│       ├── jwt/JwtUtil.java             # JWT 生成/解析/校验
-│       └── context/UserContextHolder.java
-│
-├── gateway-service/                     # 网关服务 :8080
-│   ├── pom.xml
-│   ├── Dockerfile
-│   └── src/main/
-│       ├── java/.../gateway/
-│       │   ├── GatewayApplication.java
-│       │   └── config/
-│       │       ├── JwtAuthFilter.java   # 全局 JWT 过滤器
-│       │       └── RateLimitConfig.java # 限流 Key 解析器
-│       └── resources/application.yml
-│
-├── user-service/                        # 用户服务 :9001
-│   ├── pom.xml
-│   ├── Dockerfile
-│   └── src/main/java/.../user/
-│       ├── entity/User.java
-│       ├── mapper/UserMapper.java
-│       ├── dto/{RegisterDTO,LoginDTO,UpdateUserDTO}.java
-│       ├── vo/{UserVO,LoginVO}.java
-│       ├── service/{UserService,impl/UserServiceImpl}.java
-│       └── controller/UserController.java
-│
-├── menu-service/                        # 菜品与菜单服务 :9002
-│   ├── pom.xml
-│   ├── Dockerfile
-│   └── src/main/java/.../menu/
-│       ├── entity/{Dish,DailyMenu,DailyMenuItem}.java
-│       ├── mapper/{DishMapper,DailyMenuMapper,DailyMenuItemMapper}.java
-│       ├── dto/{DishDTO,DailyMenuDTO,StockOperateDTO}.java
-│       ├── vo/{DishVO,DailyMenuVO}.java
-│       ├── service/{DishService,DailyMenuService,impl/...}.java
-│       └── controller/MenuController.java
-│
-├── order-service/                       # 订单服务 :9003
-│   ├── pom.xml
-│   ├── Dockerfile
-│   └── src/main/java/.../order/
-│       ├── entity/{Order,OrderItem}.java
-│       ├── mapper/{OrderMapper,OrderItemMapper}.java
-│       ├── dto/{CreateOrderDTO,OrderItemDTO}.java
-│       ├── vo/{OrderVO,OrderItemVO}.java
-│       ├── feign/{MenuFeignClient,PickupFeignClient}.java
-│       ├── feign/dto/{StockRequest,PickupQueueRequest}.java
-│       ├── service/{OrderService,impl/OrderServiceImpl}.java
-│       └── controller/OrderController.java
-│
-├── pickup-service/                      # 取餐与排队服务 :9004
-│   ├── pom.xml
-│   ├── Dockerfile
-│   └── src/main/java/.../pickup/
-│       ├── entity/{PickupWindow,PickupQueue}.java
-│       ├── mapper/{PickupWindowMapper,PickupQueueMapper}.java
-│       ├── dto/{CreateWindowDTO,VerifyRequest,AddToQueueRequest}.java
-│       ├── vo/{PickupWindowVO,PickupQueueVO,ScreenMessage}.java
-│       ├── feign/OrderFeignClient.java
-│       ├── websocket/PickupScreenHandler.java
-│       ├── config/{WebSocketConfig,GlobalExceptionHandler}.java
-│       ├── service/{PickupService,impl/PickupServiceImpl}.java
-│       └── controller/PickupController.java
-│
-├── deploy/                              # Docker Compose 部署
-│   ├── docker-compose.yml               # MySQL + Redis + Nacos
-│   └── sql/init.sql                     # 建库建表 + 演示数据
-│
-├── k8s/                                 # K3S 部署清单
-│   ├── namespace.yaml
-│   ├── configmap.yaml                   # MySQL 初始化 SQL
-│   ├── mysql.yaml
-│   ├── redis.yaml
-│   ├── nacos.yaml
-│   ├── user-service.yaml
-│   ├── menu-service.yaml
-│   ├── order-service.yaml
-│   ├── pickup-service.yaml
-│   ├── gateway-service.yaml
-│   └── ingress.yaml
-│
-└── docs/                                # 软件工程文档
-    ├── 01-需求规格说明书.md
-    ├── 02-概要设计说明书.md
-    ├── 03-详细设计说明书.md
-    ├── 04-测试用例.md
-    ├── 05-测试报告.md
-    ├── 06-架构设计文档.md
-    └── 07-K3S部署方案说明.md
-```
+访问 http://localhost:5173，Vite 已配置 `/api` 和 `/ws` 代理到 `http://localhost:8080`。
