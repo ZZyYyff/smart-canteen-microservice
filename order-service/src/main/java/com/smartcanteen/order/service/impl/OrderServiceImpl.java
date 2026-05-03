@@ -143,7 +143,9 @@ public class OrderServiceImpl implements OrderService {
     public List<OrderVO> getMerchantPendingOrders() {
         List<Order> orders = orderMapper.selectList(
                 new LambdaQueryWrapper<Order>()
-                        .in(Order::getStatus, List.of(OrderStatus.CREATED.name(), OrderStatus.ACCEPTED.name()))
+                        .in(Order::getStatus, List.of(OrderStatus.CREATED.name(),
+                                OrderStatus.ACCEPTED.name(), OrderStatus.COOKING.name(),
+                                OrderStatus.WAIT_PICKUP.name()))
                         .orderByAsc(Order::getCreatedAt));
         return orders.stream().map(order -> {
             List<OrderItem> items = getOrderItems(order.getId());
