@@ -8,6 +8,7 @@ import App from './App.vue'
 import router from './router'
 import './styles/global.scss'
 import './styles/global.css'
+import './styles/element-override.css'
 
 const app = createApp(App)
 

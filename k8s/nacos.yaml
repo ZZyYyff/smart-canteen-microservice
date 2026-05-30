@@ -41,6 +41,14 @@ spec:
               value: standalone
             - name: PREFER_HOST_MODE
               value: hostname
+            - name: NACOS_APPLICATION_PORT
+              value: "8848"
+            - name: JVM_XMS
+              value: "512m"
+            - name: JVM_XMX
+              value: "512m"
+            - name: JVM_XMN
+              value: "256m"
           ports:
             - containerPort: 8848
             - containerPort: 9848

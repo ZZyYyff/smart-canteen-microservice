@@ -1,18 +1,19 @@
 <template>
   <div class="admin-system-config">
-    <h2 class="page-title mb-20">系统信息</h2>
+    <h2 class="page-title mb-20">系统配置概览</h2>
+    <p class="page-subtitle mb-20">当前部署环境信息与技术架构总览</p>
 
     <el-row :gutter="16">
       <!-- 环境信息 -->
       <el-col :xs="24" :md="12" class="mb-16">
         <div class="card">
-          <h3 class="mb-16">运行环境</h3>
+          <h3 class="mb-16">部署环境</h3>
           <el-descriptions :column="1" border size="small">
             <el-descriptions-item label="网关地址">
-              <el-tag size="small">{{ apiBaseUrl || 'Vite 代理' }}</el-tag>
+              <el-tag size="small">{{ apiBaseUrl || 'Vite 代理 → localhost:8080' }}</el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="WebSocket">
-              <el-tag size="small">{{ wsBaseUrl }}</el-tag>
+              <el-tag size="small">{{ wsBaseUrl || 'ws://localhost:8080' }}</el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="MySQL">
               <el-tag size="small" type="info">localhost:3307</el-tag>
@@ -20,8 +21,11 @@
             <el-descriptions-item label="Redis">
               <el-tag size="small" type="info">localhost:6379</el-tag>
             </el-descriptions-item>
-            <el-descriptions-item label="Nacos">
+            <el-descriptions-item label="Nacos 控制台">
               <el-tag size="small" type="info">localhost:8848</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="Nacos gRPC">
+              <el-tag size="small" type="info">localhost:9848</el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="当前角色">
               <el-tag size="small" type="danger">ADMIN</el-tag>
@@ -69,4 +73,5 @@ const services = [
 
 <style scoped>
 .page-title { font-size: 20px; font-weight: 700; }
+.page-subtitle { font-size: 13px; color: var(--text-muted); }
 </style>

@@ -33,7 +33,10 @@ spec:
       containers:
         - name: menu-service
           image: smart-canteen/menu-service:latest
+          imagePullPolicy: IfNotPresent
           env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xmx256m -Xms128m"
             - name: MYSQL_HOST
               value: mysql
             - name: MYSQL_PORT
@@ -46,6 +49,8 @@ spec:
               value: redis
             - name: NACOS_SERVER_ADDR
               value: nacos:8848
+            - name: SPRING_CLOUD_NACOS_DISCOVERY_EPHEMERAL
+              value: "false"
           ports:
             - containerPort: 9002
           readinessProbe:

@@ -1,7 +1,7 @@
 <template>
   <div class="register-container">
-    <div class="register-card card">
-      <h1 class="register-title">创建账号</h1>
+    <div class="register-card">
+      <h2 class="register-title">注册账号</h2>
       <p class="register-subtitle">填写信息完成注册</p>
 
       <el-form
@@ -12,30 +12,15 @@
         @submit.prevent="handleRegister"
       >
         <el-form-item prop="phone">
-          <el-input
-            v-model="form.phone"
-            placeholder="请输入手机号"
-            size="large"
-            clearable
-          />
+          <el-input v-model="form.phone" placeholder="手机号" size="large" clearable />
         </el-form-item>
 
         <el-form-item prop="studentNo">
-          <el-input
-            v-model="form.studentNo"
-            placeholder="请输入学工号"
-            size="large"
-            clearable
-          />
+          <el-input v-model="form.studentNo" placeholder="学工号" size="large" clearable />
         </el-form-item>
 
         <el-form-item prop="nickname">
-          <el-input
-            v-model="form.nickname"
-            placeholder="昵称（选填）"
-            size="large"
-            clearable
-          />
+          <el-input v-model="form.nickname" placeholder="昵称（选填）" size="large" clearable />
         </el-form-item>
 
         <el-form-item prop="role">
@@ -46,33 +31,15 @@
         </el-form-item>
 
         <el-form-item prop="password">
-          <el-input
-            v-model="form.password"
-            type="password"
-            placeholder="请输入密码（6-20位）"
-            size="large"
-            show-password
-          />
+          <el-input v-model="form.password" type="password" placeholder="密码（6-20位）" size="large" show-password />
         </el-form-item>
 
         <el-form-item prop="confirmPassword">
-          <el-input
-            v-model="form.confirmPassword"
-            type="password"
-            placeholder="请再次输入密码"
-            size="large"
-            show-password
-          />
+          <el-input v-model="form.confirmPassword" type="password" placeholder="确认密码" size="large" show-password />
         </el-form-item>
 
         <el-form-item>
-          <el-button
-            type="primary"
-            size="large"
-            class="register-btn"
-            :loading="loading"
-            @click="handleRegister"
-          >
+          <el-button type="primary" size="large" class="register-btn" :loading="loading" @click="handleRegister">
             注 册
           </el-button>
         </el-form-item>
@@ -160,43 +127,55 @@ async function handleRegister() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--primary-lighter);
+  background:
+    radial-gradient(ellipse at 30% 10%, rgba(199, 91, 57, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse at 70% 90%, rgba(242, 156, 86, 0.05) 0%, transparent 60%),
+    var(--bg);
   padding: 20px;
 }
 
 .register-card {
-  width: 440px;
+  width: 420px;
   max-width: 100%;
-  padding: 40px;
+  padding: 40px 36px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
 }
 
 .register-title {
-  font-size: 20px;
+  font-family: 'ZCOOL KuaiLe', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 26px;
   font-weight: 700;
   text-align: center;
-  color: var(--text);
-  margin-bottom: 6px;
+  color: var(--text-heading);
+  margin-bottom: 4px;
 }
 
 .register-subtitle {
   text-align: center;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   margin-bottom: 28px;
   font-size: 14px;
 }
 
 .register-btn {
   width: 100%;
+  height: 46px;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  margin-top: 4px;
 }
 
 .register-login {
   text-align: center;
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
+  margin-top: 20px;
 }
-
 .register-login a {
   color: var(--primary);
-  font-weight: 500;
+  font-weight: 600;
 }
 </style>

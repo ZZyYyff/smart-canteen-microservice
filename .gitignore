@@ -38,6 +38,7 @@ application-dev.yaml
 *.pem
 *.key
 
-# ====== Claude ======
+# ====== Claude / Superpowers ======
 .claude/
 CLAUDE.md
+.superpowers/

@@ -84,10 +84,11 @@ import { reactive, onMounted } from 'vue'
 import { User, Food, TakeawayBox, Setting, Monitor } from '@element-plus/icons-vue'
 import { listDishes } from '@/api/menu'
 import { listWindows } from '@/api/pickup'
+import { getAdminUserList } from '@/api/user'
 import StatCard from '@/components/StatCard.vue'
 
 const stats = reactive({
-  userCount: '--',
+  userCount: '--' as number | string,
   dishCount: 0,
   windowCount: 0,
   serviceCount: 5,
@@ -112,7 +113,13 @@ onMounted(async () => {
     stats.windowCount = windows.length
   } catch { /* */ }
 
-  // 后端暂未提供用户列表接口，用户数量显示为占位符
+  try {
+    const result = await getAdminUserList({ size: 1 })
+    stats.userCount = result.total
+  } catch {
+    // 请求失败保持 '--' 占位
+    console.warn('获取用户总数失败')
+  }
 })
 </script>
 

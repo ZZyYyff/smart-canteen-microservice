@@ -1,0 +1,15 @@
+/* Element Plus theme override — Warm Kitchen palette */
+
+:root {
+  --el-color-primary: #C75B39;
+  --el-color-primary-light-3: #D47D60;
+  --el-color-primary-light-5: #E1A08A;
+  --el-color-primary-light-7: #EEC3B4;
+  --el-color-primary-light-8: #F4D9CF;
+  --el-color-primary-light-9: #F9ECE6;
+  --el-color-primary-dark-2: #A84A2E;
+  --el-color-success: #3D8B37;
+  --el-color-warning: #E87D2F;
+  --el-color-danger: #D44637;
+  --el-color-info: #6B7D8E;
+}

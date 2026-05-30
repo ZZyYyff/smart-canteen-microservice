@@ -34,11 +34,16 @@ spec:
       containers:
         - name: gateway-service
           image: smart-canteen/gateway-service:latest
+          imagePullPolicy: IfNotPresent
           env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xmx256m -Xms128m"
             - name: REDIS_HOST
               value: redis
             - name: NACOS_SERVER_ADDR
               value: nacos:8848
+            - name: SPRING_CLOUD_NACOS_DISCOVERY_EPHEMERAL
+              value: "false"
           ports:
             - containerPort: 8080
           readinessProbe:

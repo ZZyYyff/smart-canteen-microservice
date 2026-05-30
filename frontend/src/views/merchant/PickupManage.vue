@@ -4,7 +4,7 @@
 
     <el-row :gutter="16">
       <!-- 左侧：窗口列表与叫号 -->
-      <el-col :xs="24" :md="14">
+      <el-col :xs="24" :md="16">
         <div class="card mb-16">
           <h3 class="mb-16">选择窗口</h3>
           <el-select
@@ -67,7 +67,7 @@
       </el-col>
 
       <!-- 右侧：核销 -->
-      <el-col :xs="24" :md="10">
+      <el-col :xs="24" :md="8">
         <div class="card">
           <h3 class="mb-16">取餐核销</h3>
           <el-form :model="verifyForm" label-position="top">

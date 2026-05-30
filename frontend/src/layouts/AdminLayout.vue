@@ -1,7 +1,7 @@
 <template>
   <div class="app-layout app-layout--has-sidebar">
     <aside class="app-sidebar">
-      <div class="sidebar-logo">⚙️ 管理后台</div>
+      <div class="sidebar-logo">管理后台</div>
       <SideMenu :menu-items="menuItems" />
     </aside>
     <div class="app-main">

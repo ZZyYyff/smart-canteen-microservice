@@ -6,7 +6,7 @@
     class="side-menu"
     background-color="#FFFFFF"
     text-color="#6B7280"
-    active-text-color="#0D9488"
+    active-text-color="#C75B39"
   >
     <template v-for="item in menuItems" :key="item.path">
       <el-menu-item v-if="!item.children" :index="item.path">
