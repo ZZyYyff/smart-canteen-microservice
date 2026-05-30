@@ -99,3 +99,22 @@ docker build -t smart-canteen/user-service:latest .
 ## 详细部署方案
 
 参见 [docs/07-K3S部署方案说明.md](../docs/07-K3S部署方案说明.md)。
+
+## 课程演示注意事项
+
+> ⚠️ 本 K3S 部署配置为课程演示环境设计，以下限制需注意：
+
+| 限制 | 说明 | 影响 |
+|------|------|------|
+| MySQL 使用 emptyDir | 数据存储在 Pod 临时目录 | Pod 重启后数据库数据丢失，演示过程中**不要重启 MySQL Pod** |
+| 密码明文 | YAML 中 `MYSQL_ROOT_PASSWORD`、`MYSQL_PASSWORD` 等以明文书写 | 课程演示可接受，生产环境需使用 K8S Secret |
+| Nacos 无持久化 | standalone 模式使用内嵌 Derby | Pod 重启后服务需重新注册（会自愈，约等待 30 秒） |
+| 镜像标签 `:latest` | `imagePullPolicy: IfNotPresent` | 更新镜像后需手动删除旧 Pod 触发重新拉取 |
+| 无资源限制 | 未设置 `resources.requests/limits` | 内存不足时 Pod 可能被 OOM Kill |
+
+### 演示前检查清单
+
+- [ ] 所有 Pod 状态为 `Running`
+- [ ] Nacos 控制台（`http://<node-ip>:8848/nacos`）中 5 个服务均已注册
+- [ ] 商家已登录前端创建今日菜单（数据库中无默认菜单数据）
+- [ ] 大屏页面 WebSocket 连接正常
