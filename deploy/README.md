@@ -76,3 +76,47 @@ docker exec -it smart-canteen-mysql mysql -uroot -proot smart_canteen
 http://localhost:8848/nacos
 
 账号 / 密码：`nacos` / `nacos`
+
+## 演示账号
+
+数据库初始化后包含 3 个内置用户，密码均为 `123456`：
+
+| 角色 | 手机号 | 学工号 | 昵称 |
+|------|--------|--------|------|
+| 学生 | `13800000001` | `2024001` | 张三 |
+| 商家 | `13800000002` | `2024002` | 李四 |
+| 管理员 | `13800000003` | `2024003` | 管理员 |
+
+## 中文编码
+
+所有数据库连接已配置 UTF-8：
+- MySQL 容器启动参数：`--character-set-server=utf8mb4` + `--collation-server=utf8mb4_unicode_ci`
+- JDBC URL 包含 `characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci`
+- Spring Boot 配置 `server.servlet.encoding.charset=UTF-8`
+
+如果出现中文乱码，可执行修复脚本：
+
+```bash
+docker exec -i smart-canteen-mysql mysql -uroot -proot --default-character-set=utf8mb4 < sql/fix-demo-data-encoding.sql
+```
+
+## 常见问题
+
+### 端口冲突
+
+MySQL 宿主机使用 3307 映射，避免与本地已安装的 MySQL（3306）冲突。如果 3307 也被占用，修改 `docker-compose.yml` 中的 host port。
+
+### Nacos 启动较慢
+
+Nacos 容器健康检查需要等待 HTTP 就绪响应。首次启动可能需 30-60 秒，如果后端服务报 `UNAVAILABLE: io exception`，等待片刻后重试即可。
+
+### 数据库无默认今日菜单
+
+`init.sql` 不包含每日菜单（`daily_menus`）的初始化数据。**演示前必须由商家登录前端或通过 API 创建今日菜单**，否则学生端"今日菜单"页面为空。
+
+### 中文乱码
+
+如果数据库中的中文数据显示为乱码：
+1. 确认 JDBC URL 包含 `characterEncoding=UTF-8`
+2. 运行 `fix-demo-data-encoding.sql` 修复已有数据
+3. 检查 MySQL 容器字符集：`docker exec smart-canteen-mysql mysql -uroot -proot -e "SHOW VARIABLES LIKE 'character%';"`

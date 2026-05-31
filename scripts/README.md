@@ -8,6 +8,7 @@
 | `stop-backend.ps1` | PowerShell 停止脚本（三层兜底停止所有进程） |
 | `start-backend.bat` | CMD 启动入口（双击可用） |
 | `stop-backend.bat` | CMD 停止入口（双击可用） |
+| `cleanup-vm.sh` | Ubuntu VM 磁盘清理脚本（K3S 环境维护用） |
 
 ## 使用方法
 
@@ -85,3 +86,26 @@ logs/
 - Java 17+，`java` 命令在 PATH 中
 - Maven 3.8+，`mvn` 命令在 PATH 中
 - 项目根目录包含 `pom.xml` 和所有子模块
+
+## 常见问题
+
+### 旧进程残留导致端口占用
+
+如果启动失败提示端口被占用，先执行停止脚本再重新启动：
+
+```powershell
+.\scripts\stop-backend.ps1
+.\scripts\start-backend.ps1
+```
+
+### Nacos gRPC 端口未就绪
+
+Nacos 2.x 需要 gRPC 端口（9848）就绪后服务才能正常注册。脚本已等待该端口，但如果服务仍报 `UNAVAILABLE: io exception`，说明 Nacos 内部初始化未完成，等待 15 秒后重启对应服务即可。
+
+### Windows 控制台中文乱码
+
+Java 启动已添加 `-Dfile.encoding=UTF-8`，服务日志文件（`logs/*.log`）中文正常。Windows 控制台可能出现中文显示为乱码，这是控制台编码问题，不影响功能。
+
+### 启动超时
+
+编译步骤（`mvn clean package`）在首次运行时需要下载依赖，可能耗时较长。后续启动因为增量编译会明显加快。如果端口等待超时（默认 90 秒），检查对应服务的 `logs/<service>.err.log` 日志。如果 `gateway-service` 超时，可能是 Nacos gRPC 未就绪，等待 Nacos 完全启动后重试。

@@ -118,3 +118,27 @@ docker build -t smart-canteen/user-service:latest .
 - [ ] Nacos 控制台（`http://<node-ip>:8848/nacos`）中 5 个服务均已注册
 - [ ] 商家已登录前端创建今日菜单（数据库中无默认菜单数据）
 - [ ] 大屏页面 WebSocket 连接正常
+
+## 删除部署
+
+```bash
+kubectl delete -f ingress.yaml
+kubectl delete -f gateway-service.yaml
+kubectl delete -f pickup-service.yaml
+kubectl delete -f order-service.yaml
+kubectl delete -f menu-service.yaml
+kubectl delete -f user-service.yaml
+kubectl delete -f configmap.yaml
+kubectl delete -f nacos.yaml
+kubectl delete -f redis.yaml
+kubectl delete -f mysql.yaml
+kubectl delete -f namespace.yaml
+```
+
+> 删除 namespace 会同时删除该命名空间下的所有资源。
+
+## 集群验证提醒
+
+- K3S 真实集群部署需要在 Ubuntu VM 或 K3S 环境中**人工验证**
+- 首次部署建议按顺序逐个 apply 并等待 Pod ready 后再继续
+- 如果 Pod 处于 `ImagePullBackOff`，检查镜像是否已构建并导入 K3S（`k3s ctr images import`）

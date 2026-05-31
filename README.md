@@ -511,3 +511,61 @@ npm run dev
 ```
 
 访问 http://localhost:5173，Vite 已配置 `/api` 和 `/ws` 代理到 `http://localhost:8080`。
+
+## 测试结果
+
+| 项目 | 命令 | 结果 |
+|------|------|:---:|
+| 后端编译 | `mvn clean package -DskipTests` | ✅ BUILD SUCCESS（7/7 模块） |
+| 后端测试 | `mvn test` | ✅ 124 个测试，0 失败，0 错误，0 跳过 |
+| 前端构建 | `npm run build` | ✅ 1741 modules transformed, built in ~5s |
+
+### 测试模块分布
+
+| 模块 | 测试数 |
+|------|:---:|
+| common | 21 |
+| gateway-service | 8 |
+| user-service | 19 |
+| menu-service | 28 |
+| order-service | 25 |
+| pickup-service | 20 |
+| **合计** | **124** |
+
+## 已知限制与注意事项
+
+### 演示前提
+- **数据库初始化后没有默认今日菜单**，学生端点餐前需商家先登录并创建今日菜单（见 [典型演示流程](#典型演示流程)）
+- 叫号前订单必须先完成完整状态流转：接单 → 制作中 → 备餐完成 → 进入待取餐队列
+
+### K3S 部署
+- MySQL 使用 emptyDir 存储，**Pod 重启后数据会丢失**（课程演示环境配置，生产环境应改为 PersistentVolumeClaim）
+- 部分密码以环境变量明文配置，仅用于课程演示，生产环境应使用 K8S Secret
+- K3S 真实集群部署需要在 Ubuntu VM 或 K3S 环境中人工验证
+
+### 前端构建
+- Sass Legacy JS API 警告（依赖链问题，Sass 2.0 后上游修复，不影响功能）
+- Element Plus chunk 体积约 1054KB（已通过 manualChunks 拆分，主应用代码仅 50KB）
+- npm audit 存在 3 个非阻塞漏洞（2 moderate + 1 high，均为第三方依赖）
+
+### 其他
+- Windows 控制台输出中文日志可能出现乱码（仅控制台渲染问题，不影响日志文件和功能）
+- 单 MySQL/Nacos/Redis 实例，适合课程演示，生产环境建议集群部署
+- 跨服务库存操作无分布式事务，多菜品下单时库存回滚可能失败（已实现手动回滚兜底）
+
+## 课程提交说明
+
+本项目为《分布式系统》课程大作业，已覆盖以下课程要求：
+
+| 要求 | 覆盖情况 |
+|------|:---:|
+| ≥5 个微服务 | ✅ 5 个业务服务 + 1 个网关 |
+| Nacos 注册发现 | ✅ Nacos 2.3.2，5 个服务自动注册 |
+| API Gateway | ✅ Spring Cloud Gateway，路由 + JWT + 限流 |
+| 服务间通信 | ✅ OpenFeign（order↔menu，order↔pickup，pickup↔order） |
+| JWT 鉴权 | ✅ 双 Token（AccessToken 24h + RefreshToken 7d） |
+| WebSocket | ✅ 大屏实时叫号推送 |
+| Docker 部署 | ✅ Docker Compose（MySQL + Redis + Nacos） |
+| K3S 部署 | ✅ 11 个 YAML 清单文件 |
+| 单元/集成测试 | ✅ 124 个测试，0 失败 |
+| 完整文档 | ✅ 8 份 docs + 5 份 README |
